@@ -507,14 +507,16 @@ class AIAgent(BaseAgent):
     
     def _convert_brainstorm_response(self, statement: Statement, result: Dict) -> MinerResponse:
         """Convert brainstorm API response to MinerResponse format."""
-        # Convert string resolution to numeric
-        resolution_map = {"TRUE": 1, "FALSE": 0, "PENDING": 2}
+        # Use string resolution directly
         resolution_str = result.get("resolution", "PENDING")
-        resolution_int = resolution_map.get(resolution_str, 2)  # Default to PENDING
+        if resolution_str in ["TRUE", "FALSE", "PENDING"]:
+            resolution = Resolution(resolution_str)
+        else:
+            resolution = Resolution.PENDING  # Default to PENDING
         
         return MinerResponse(
             statement=statement.statement,
-            resolution=Resolution(resolution_int),
+            resolution=resolution,
             confidence=result.get("confidence", 50),
             summary=result.get("summary", "Brainstorm API response"),
             sources=result.get("sources", ["brainstorm"]),
@@ -525,14 +527,16 @@ class AIAgent(BaseAgent):
     
     def _convert_ai_response(self, statement: Statement, ai_result: Dict) -> MinerResponse:
         """Convert AI reasoning response to MinerResponse format."""
-        # Convert string resolution to numeric
-        resolution_map = {"TRUE": 1, "FALSE": 0, "PENDING": 2}
+        # Use string resolution directly
         resolution_str = ai_result.get("resolution", "PENDING")
-        resolution_int = resolution_map.get(resolution_str, 2)  # Default to PENDING
+        if resolution_str in ["TRUE", "FALSE", "PENDING"]:
+            resolution = Resolution(resolution_str)
+        else:
+            resolution = Resolution.PENDING  # Default to PENDING
         
         return MinerResponse(
             statement=statement.statement,
-            resolution=Resolution(resolution_int),
+            resolution=resolution,
             confidence=ai_result.get("confidence", 50),
             summary=ai_result.get("summary", "AI analysis"),
             sources=ai_result.get("sources", ["ai_reasoning"]),
