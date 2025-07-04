@@ -1,4 +1,4 @@
-# Bittensor Subnet 90 - DegenBrain Setup Guide
+# Bittensor Subnet 90 - DegenBrain
 
 **Status: ✅ Subnet fully operational — validator and 4 neurons active**
 
@@ -8,7 +8,7 @@ A Bittensor subnet for automated verification of prediction market statements th
 
 - **OS**: Linux (Ubuntu 22.04 LTS recommended)
 - **TAO Balance**: 1+ TAO for registration costs (~1 TAO per hotkey)
-- **RAM**: 2GB+ for validator, 1GB+ per miner
+- **RAM**: 1GB+ per miner
 - **Storage**: 10GB+ available space
 
 ---
@@ -56,8 +56,6 @@ btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner
 # Optional: Create additional miners/validators and register them
 # btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_2
 # btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_2
-# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey validator
-# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator
 ```
 
 ### 5. Configure
@@ -101,9 +99,6 @@ pm2 monit                          # Real-time monitoring
 The subnet enables automated verification of prediction statements by distributing verification tasks to miners who provide evidence-based resolution decisions.
 
 ### How It Works
-```
-DegenBrain API → Validator → Miners → Consensus → Bittensor Weights
-```
 
 1. **Validator** fetches statement batches from `https://api.subnet90.com/api/test/next-chunk` (every 16+ minutes due to rate limiting)
 2. **Distributes** statements to registered miners on subnet 90
@@ -123,24 +118,18 @@ Miners support different verification strategies. Edit `MINER_STRATEGY` in your 
 | Strategy | API Keys Required | Description |
 |----------|------------------|-------------|
 | **dummy** | None | Simple mock responses - perfect for testing |
-| **hybrid** | None (optional AI) | Training mode - uses official resolutions from `api.subnet90.com` |  
 | **ai_reasoning** | AI keys required | Full independence - analyzes statements without assistance |
 
 #### Example Configuration:
 ```bash
 # In your .env file:
-MINER_STRATEGY=hybrid
+MINER_STRATEGY=ai_reasoning
 
 # Optional: Add AI keys for unknown statements  
 # OPENAI_API_KEY=your_key_here
 # ANTHROPIC_API_KEY=your_key_here
 ```
 
-**Hybrid mode** is perfect for learning:
-- ✅ **Zero setup** - works without any API keys
-- ✅ **Official resolutions** - learns from verified answers  
-- ✅ **Training phase** - prepares miners for independent analysis
-- 🔄 **Temporary** - will be phased out as subnet matures
 
 ---
 
