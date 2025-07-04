@@ -120,14 +120,88 @@ Miners support different verification strategies. Edit `MINER_STRATEGY` in your 
 | **dummy** | None | Simple mock responses - perfect for testing |
 | **ai_reasoning** | AI keys required | Full independence - analyzes statements without assistance |
 
-#### Example Configuration:
-```bash
-# In your .env file:
-MINER_STRATEGY=ai_reasoning
+### LLM Provider Configuration
 
-# Optional: Add AI keys for unknown statements  
-# OPENAI_API_KEY=your_key_here
-# ANTHROPIC_API_KEY=your_key_here
+The `ai_reasoning` strategy supports multiple LLM providers. Configure by setting `LLM_PROVIDER` and the corresponding API key:
+
+#### Supported Providers:
+
+| Provider | Description | Models Available |
+|----------|-------------|------------------|
+| **openai** | OpenAI GPT models | gpt-4o, gpt-4-turbo, gpt-3.5-turbo |
+| **anthropic** | Anthropic Claude models | claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307 |
+| **groq** | Groq (LLaMA 3) | llama3-8b-8192, llama3-70b-8192, mixtral-8x7b-32768 |
+| **gemini** | Google Gemini | gemini-1.5-pro, gemini-pro |
+| **openrouter** | OpenRouter (Mistral, etc.) | mistralai/mistral-7b-instruct + many others |
+| **chutes** | Bittensor decentralized inference | Any model deployed on Chutes |
+
+#### Configuration Examples:
+
+**OpenAI:**
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4o
+```
+
+**Anthropic Claude:**
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-3-sonnet-20240229
+```
+
+**Groq (Fast LLaMA 3):**
+```bash
+LLM_PROVIDER=groq
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama3-70b-8192
+```
+
+**Google Gemini:**
+```bash
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-1.5-pro
+```
+
+**OpenRouter (Mistral):**
+```bash
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=mistralai/mistral-7b-instruct
+```
+
+**Chutes (Bittensor Decentralized):**
+```bash
+LLM_PROVIDER=chutes
+CHUTES_CPK_API_KEY=your_cpk_api_key_here
+CHUTES_SLUG=your-username-model-slug
+CHUTES_MODEL=unsloth/Llama-3.2-3B-Instruct
+```
+
+### Additional Data Sources
+
+#### CoinGecko API (Crypto Data):
+```bash
+COINGECKO_API_KEY=your_coingecko_api_key_here
+```
+
+#### Complete Example Configuration:
+```bash
+# Basic setup
+WALLET_NAME=my_wallet
+HOTKEY_NAME=miner_1
+API_URL="https://api.subnet90.com"
+
+# AI Strategy with Anthropic
+MINER_STRATEGY=ai_reasoning
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-3-sonnet-20240229
+
+# Optional data sources
+COINGECKO_API_KEY=your_coingecko_api_key_here
 ```
 
 
