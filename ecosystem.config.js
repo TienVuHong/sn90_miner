@@ -1,6 +1,9 @@
 const path = require("path");
 const fs = require("fs");
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 // Base directory
 const base = path.resolve(__dirname);
 const venvPath = path.join(base, ".venv");

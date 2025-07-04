@@ -70,7 +70,13 @@ WALLET_NAME=my_wallet
 HOTKEY_NAME=miner_1
 ```
 
-If you used different names, edit with: `nano .env`
+**Important**: If you used different wallet/hotkey names, edit with: `nano .env`
+
+For custom hotkey names, you can also set:
+```bash
+MINER_1_HOTKEY=your_custom_hotkey_name
+VALIDATOR_HOTKEY=your_validator_name
+```
 
 ### 6. Start Everything
 ```bash
@@ -179,6 +185,24 @@ CHUTES_CPK_API_KEY=your_cpk_api_key_here
 CHUTES_SLUG=your-username-model-slug
 CHUTES_MODEL=unsloth/Llama-3.2-3B-Instruct
 ```
+
+### Hotkey Configuration
+
+By default, the system looks for these hotkey names:
+- **Miners**: `miner_1`, `miner_2`, `miner_3`
+- **Validator**: `validator`
+
+You can customize hotkey names using environment variables:
+
+```bash
+# Custom hotkey names
+MINER_1_HOTKEY=my_custom_miner
+MINER_2_HOTKEY=another_miner
+MINER_3_HOTKEY=third_miner
+VALIDATOR_HOTKEY=my_validator
+```
+
+This is useful if you want to use different naming conventions or run multiple instances.
 
 ### Additional Data Sources
 

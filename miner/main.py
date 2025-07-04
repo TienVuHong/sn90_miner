@@ -92,8 +92,11 @@ class Miner:
         agent_type = self.config.miner_agent
         strategy = os.getenv("MINER_STRATEGY", "dummy")
         
+        logger.info(f"Agent selection debug", agent_type=agent_type, strategy=strategy)
+        
         # Only allow ai_reasoning strategy (hybrid mode removed)
         if strategy == "ai_reasoning":
+            logger.info(f"Creating AI agent with strategy: {strategy}")
             from miner.agents.ai_agent import AIAgent
             
             # Create AI agent config from environment variables
@@ -139,19 +142,26 @@ class Miner:
             logger.info("Creating AI Agent", 
                        strategy=strategy, 
                        llm_provider=ai_config["llm_provider"])
-            return AIAgent(ai_config)
+            try:
+                ai_agent = AIAgent(ai_config)
+                logger.info("AI agent created successfully")
+                return ai_agent
+            except Exception as e:
+                logger.error(f"Failed to create AI agent: {e}")
+                logger.info("Falling back to DummyAgent")
+                return DummyAgent({
+                    "accuracy": 0.8,
+                    "delay": 0.2,
+                    "confidence_range": (70, 95)
+                })
         
-        elif agent_type == "dummy" or strategy == "dummy":
-            # Use dummy agent
+        else:
+            # Default to dummy agent for any other strategy
             return DummyAgent({
                 "accuracy": 0.8,
                 "delay": 0.2,
                 "confidence_range": (70, 95)
             })
-        else:
-            # Default to dummy agent
-            logger.warning(f"Unknown agent type: {agent_type}, using DummyAgent")
-            return DummyAgent()
     
     async def setup(self):
         """Set up Bittensor miner components."""
