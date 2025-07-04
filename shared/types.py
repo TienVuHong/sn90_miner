@@ -10,11 +10,11 @@ import json
 from pydantic import BaseModel, Field, validator
 
 
-class Resolution(int, Enum):
+class Resolution(str, Enum):
     """Possible statement resolutions."""
-    FALSE = 0
-    TRUE = 1
-    PENDING = 2
+    FALSE = "FALSE"
+    TRUE = "TRUE"
+    PENDING = "PENDING"
 
 
 class Direction(str, Enum):
