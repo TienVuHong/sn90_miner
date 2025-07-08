@@ -38,6 +38,9 @@ pip install --upgrade pip
 # Install PyTorch CPU version first (critical - prevents startup hangs)
 pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
 
+# Install Node.js dependencies for PM2 ecosystem
+npm install
+
 # Install everything else
 pip install -r requirements.txt
 ```
@@ -53,7 +56,7 @@ btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_1
 # Register on subnet (costs ~1 TAO each)
 btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_1
 
-# Optional: Create additional miners/validators and register them
+# Optional: Create additional miners and register them
 # btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_2
 # btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_2
 ```
