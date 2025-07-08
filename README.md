@@ -1,6 +1,6 @@
 # Bittensor Subnet 90 - DegenBrain
 
-**Status: ✅ Subnet fully operational — validator and 4 neurons active**
+**Status: ✅ Subnet fully operational — 4 validators and 256 neurons active**
 
 A Bittensor subnet for automated verification of prediction market statements through distributed consensus.
 
