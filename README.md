@@ -70,7 +70,7 @@ cp .env.example .env
 Your `.env` file will contain these default names:
 ```bash
 WALLET_NAME=my_wallet
-HOTKEY_NAME=miner_1
+MINER_1_HOTKEY=miner_1
 ```
 
 **Important**: If you used different wallet/hotkey names, edit with: `nano .env`
