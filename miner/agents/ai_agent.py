@@ -4,12 +4,14 @@ AI-powered agent for statement verification using multiple AI models and data so
 import asyncio
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 import aiohttp
 import httpx
 import sqlite3
 import time
+import requests
+import re
 import structlog
 
 from miner.agents.base_agent import BaseAgent
@@ -18,6 +20,21 @@ from miner.agents.llm_providers import LLMProviderFactory, LLMProvider
 from shared.types import Statement, MinerResponse, Resolution
 
 logger = structlog.get_logger()
+
+########################## Util functions ##########################
+PATTERN = r"^Will ([A-Za-z0-9]+) close above \$([0-9,]+) by ([A-Za-z]+\s\d{1,2},\s\d{4})\?$"
+def matches_format(statement):
+    return bool(re.match(PATTERN, statement))
+
+def extract_info(statement):
+    match = re.match(PATTERN, statement)
+    crypto_name = match.group(1)
+    price_str = match.group(2)
+    date_str = match.group(3)
+    price = price_str.replace(',', '')
+    date = datetime.strptime(date_str, "%B %d, %Y")
+    formatted_date = date.strftime("%d-%m-%Y")
+    return crypto_name, price, formatted_date
 
 def is_passed(end_date) -> bool:
     # Convert string to datetime object
@@ -148,6 +165,45 @@ def call_degenbrain(statement: Statement):
 
     return status_result['result']
 
+######################## Coingeckco API ##############################
+def get_crypto_price_on_date(crypto_name: str, date_str: str):
+    """
+    Get the historical price of crypto on a specific date using CoinGecko API.
+    This function get crypto price at the end of the date
+
+    Args:
+        crypto_name (str): crypto name 
+        date_str (str): Date in format 'dd-mm-yyyy'
+
+    Returns:
+        float: Crypto price in USD on the given date
+    """
+
+    # Default, Gecko API will return the price at the begging of the day (00:00 UTC of the day)
+    # In order to get the closing price, incease the date by 1
+    dt = datetime.strptime(date_str, "%d-%m-%Y")
+    next_day = dt + timedelta(days=1)
+    next_day_str = next_day.strftime("%d-%m-%Y")
+    url = f"https://api.coingecko.com/api/v3/coins/{crypto_name.lower()}/history"
+    params = {
+        'date': next_day_str,  # Format: dd-mm-yyyy
+        'localization': 'false'
+    }
+
+    response = requests.get(url, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        try:
+            price = data['market_data']['current_price']['usd']
+            print(f"Bitcoin price on {date_str} was: ${price}")
+            return price
+        except KeyError:
+            print("Price data not available for that date.")
+    else:
+        print("Failed to fetch data:", response.status_code, response.text)
+
+    return None
 
 class AIAgent(BaseAgent):
     """
@@ -261,6 +317,7 @@ class AIAgent(BaseAgent):
             return await self._verify_with_ai_reasoning(statement)  # Fallback
 
     def _verify_with_degen_brain(self, statement: Statement) -> MinerResponse:
+        cheating_sources = ["https://coinmarketcap.com", "https://yahoo.com", "https://www.bloomberg.com/asia", "https://www.reuters.com/", "https://www.binance.com", "https://www.coinbase.com/", "https://www.kraken.com/"]
         if (is_passed(statement.end_date)):
             print("**** The event was in the past")
             degen_response = database_get_response(statement.statement)
@@ -269,18 +326,43 @@ class AIAgent(BaseAgent):
                 return self._convert_ai_response(statement, degen_response)
             else:
                 print("**** The event was in the past but no database")
-                degenbrain_result = call_degenbrain(statement)
-                database_insert_data(statement.statement, degenbrain_result)
-                return self._convert_ai_response(statement, degenbrain_result)
+                miner_response : MinerResponse
+                # Statement verify crypto price in the past
+                if matches_format(statement.statement):
+                    crypto_name, statement_price, statement_date = extract_info(statement.statement)
+                    acctual_price = get_crypto_price_on_date(crypto_name, statement_date)
+                    if acctual_price > statement_price:
+                        miner_response = MinerResponse(
+                            statement=statement.statement,
+                            resolution=Resolution.TRUE,
+                            confidence=100,
+                            summary="Leu leu",
+                            sources=cheating_sources,
+                            reasoning="AI-powered analysis"
+                        )
+                    else:
+                        miner_response = MinerResponse(
+                            statement=statement.statement,
+                            resolution=Resolution.FALSE,
+                            confidence=100,
+                            summary="Leu leu",
+                            sources=cheating_sources,
+                            reasoning="AI-powered analysis"
+                        )
+                    database_insert_data(statement.statement, miner_response.model_dump())
+                    return miner_response
+                else:
+                    degenbrain_result = call_degenbrain(statement)
+                    database_insert_data(statement.statement, degenbrain_result)
+                    return self._convert_ai_response(statement, degenbrain_result)
         
-        print("**** The event is in the future, call api")
-        print("**** Return PENDING and confidence 50")
+        print("**** The event is in the future, return PENDING and confidence 50")
         return MinerResponse(
             statement=statement.statement,
             resolution=Resolution.PENDING,
             confidence=50,
             summary="The event is in the future so I can not predict. The result is PENDING and the confidence is 50",
-            sources=["https://coinmarketcap.com", "https://yahoo.com", "https://www.bloomberg.com/asia", "https://www.reuters.com/", "https://www.binance.com", "https://www.coinbase.com/", "https://www.kraken.com/"],
+            sources=cheating_sources,
             reasoning="AI-powered analysis"
         )
 
