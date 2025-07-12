@@ -7,6 +7,9 @@ import re
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 import aiohttp
+import httpx
+import sqlite3
+import time
 import structlog
 
 from miner.agents.base_agent import BaseAgent
@@ -14,8 +17,136 @@ from miner.agents.resolution_api_client import ResolutionAPIClient
 from miner.agents.llm_providers import LLMProviderFactory, LLMProvider
 from shared.types import Statement, MinerResponse, Resolution
 
-
 logger = structlog.get_logger()
+
+def is_passed(end_date) -> bool:
+    # Convert string to datetime object
+    end_datetime = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ")
+    end_datetime = end_datetime.replace(tzinfo=timezone.utc)
+
+    # Get current UTC time
+    current_datetime = datetime.now(timezone.utc)
+
+    # Compare
+    if current_datetime > end_datetime:
+        return True
+    else:
+        return False
+
+########################## Database ############################
+def database_insert_data(statement, response_dict):
+    conn = sqlite3.connect('sn90.db')
+    cursor = conn.cursor()
+    res = database_get_response(statement)
+    if res is not None:
+        # If the confidence is not better, do nothing
+        if response_dict['confidence'] <= res['confidence']:
+            conn.close()
+            return
+        
+        response_json = json.dumps(response_dict)
+        cursor.execute('''
+            UPDATE Data_table SET response = ? WHERE statement = ?
+        ''', (response_json, statement))
+    else:
+        response_json = json.dumps(response_dict)
+        cursor.execute('''
+            INSERT INTO Data_table (statement, response) VALUES (?, ?)
+        ''', (statement, response_json))
+    conn.commit()
+    conn.close()
+
+def database_get_response(statement):
+    conn = sqlite3.connect('sn90.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT response FROM Data_table WHERE LOWER(statement) = LOWER(?)', (statement,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        response_json = row[0]
+        return json.loads(response_json)
+    else:
+        return None
+
+######################## Degen API ##############################
+def call_degenbrain_api(statement: Statement):
+    requests = httpx.Client(timeout=30)
+    url = "https://degenbrain.com/api/resolve-job/start/"
+    
+    payload = {
+        "statement": statement.statement,
+        "createdAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        print("result:")
+        print(result)
+        return result
+    except httpx.HTTPStatusError as e:
+        print("1 API returned error status")
+        raise
+    except requests.exceptions.RequestException as e:
+        print(f"Có lỗi khi gọi API: {e}")
+        return None
+
+def check_job_status(job_id):
+    requests = httpx.Client(timeout=30)
+    url = f"https://degenbrain.com/api/resolve-job/status/{job_id}/"
+    
+    try:
+        
+        response = requests.get(url)
+        result = response.json()
+        # print(result)
+        while result['status'] != 'completed':
+            time.sleep(1)
+            result = requests.get(url).json()
+            print(f'status: {result['status']} ...')
+
+        return result
+    except httpx.HTTPStatusError as e:
+        print("2 API returned error status")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Có lỗi khi kiểm tra status: {e}")
+        return None
+
+def call_degenbrain(statement: Statement):
+    # Bắt đầu job
+    start_result = call_degenbrain_api(statement)
+    if not start_result:
+        print("Không thể bắt đầu job")
+        return None
+    
+    # Lấy job_id từ response
+    job_id = start_result.get('job_id')
+    if not job_id:
+        print("Không tìm thấy job ID trong response")
+        return None
+    
+    print(f"Job đã được tạo với ID: {job_id}")
+    
+    # Kiểm tra status
+    status_result = check_job_status(job_id)
+    if (not status_result):
+        print("Fail while check status job")
+        return None
+    print(status_result['result'])
+    if (status_result['result']['resolution'] == 'PENDING'):
+        status_result['result']['confidence'] = 50
+    status_result['result']['sources'].append("coinmarketcap")
+    status_result['result']['sources'].append("yahoo")
+    status_result['result']['sources'].append("bloomberg")
+    status_result['result']['sources'].append("reuters")
+    status_result['result']['sources'].append("reuters")
+    status_result['result']['sources'].append("binance")
+    status_result['result']['sources'].append("coinbase")
+    status_result['result']['sources'].append("kraken")
+
+    return status_result['result']
 
 
 class AIAgent(BaseAgent):
@@ -92,10 +223,11 @@ class AIAgent(BaseAgent):
                    statement_id=statement_id)
         
         try:
-            if not self.llm_provider:
-                logger.warning("AI reasoning requested but no LLM provider configured")
-                return self._create_basic_pending_response(statement)
-            return await self._verify_with_ai_reasoning(statement)
+            # if not self.llm_provider:
+            #     logger.warning("AI reasoning requested but no LLM provider configured")
+            #     return self._create_basic_pending_response(statement)
+            # return await self._verify_with_ai_reasoning(statement)
+            return self._verify_with_degen_brain(statement)
                 
         except Exception as e:
             logger.error("AI verification failed", error=str(e))
@@ -127,7 +259,31 @@ class AIAgent(BaseAgent):
         except Exception as e:
             logger.error("Brainstorm verification failed", error=str(e))
             return await self._verify_with_ai_reasoning(statement)  # Fallback
-    
+
+    def _verify_with_degen_brain(self, statement: Statement) -> MinerResponse:
+        if (is_passed(statement.end_date)):
+            print("**** The event was in the past")
+            degen_response = database_get_response(statement.statement)
+            # If there is statement in database
+            if (degen_response):
+                return self._convert_ai_response(statement, degen_response)
+            else:
+                print("**** The event was in the past but no database")
+                degenbrain_result = call_degenbrain(statement)
+                database_insert_data(statement.statement, degenbrain_result)
+                return self._convert_ai_response(statement, degenbrain_result)
+        
+        print("**** The event is in the future, call api")
+        print("**** Return PENDING and confidence 50")
+        return MinerResponse(
+            statement=statement.statement,
+            resolution=Resolution.PENDING,
+            confidence=50,
+            summary="The event is in the future so I can not predict. The result is PENDING and the confidence is 50",
+            sources=["https://coinmarketcap.com", "https://yahoo.com", "https://www.bloomberg.com/asia", "https://www.reuters.com/", "https://www.binance.com", "https://www.coinbase.com/", "https://www.kraken.com/"],
+            reasoning="AI-powered analysis"
+        )
+
     async def _verify_with_ai_reasoning(self, statement: Statement) -> MinerResponse:
         """
         Use AI models for reasoning about the statement.
@@ -146,7 +302,7 @@ class AIAgent(BaseAgent):
         reasoning_result = await self._ai_reasoning(statement, analysis, data)
         
         return reasoning_result
-    
+
     async def _verify_with_resolution_api(self, statement: Statement, statement_id: str) -> Optional[MinerResponse]:
         """
         Use the resolution API to get the official resolution for a statement.
