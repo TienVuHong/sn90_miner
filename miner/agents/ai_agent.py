@@ -31,7 +31,7 @@ def extract_info(statement):
     crypto_name = match.group(1)
     price_str = match.group(2)
     date_str = match.group(3)
-    price = price_str.replace(',', '')
+    price = float(price_str.replace(',', ''))
     date = datetime.strptime(date_str, "%B %d, %Y")
     formatted_date = date.strftime("%d-%m-%Y")
     return crypto_name, price, formatted_date
