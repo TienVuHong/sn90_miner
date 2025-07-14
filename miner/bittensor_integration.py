@@ -9,12 +9,12 @@ import structlog
 
 try:
     import bittensor as bt
-    import torch
+    # import torch
     BITTENSOR_AVAILABLE = True
 except ImportError:
     BITTENSOR_AVAILABLE = False
     bt = None
-    torch = None
+    # torch = None
 
 from shared.config import get_config
 from shared.protocol import DegenBrainSynapse, ProtocolValidator, Resolution
