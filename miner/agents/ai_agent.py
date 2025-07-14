@@ -330,25 +330,16 @@ class AIAgent(BaseAgent):
                 # Statement verify crypto price in the past
                 if matches_format(statement.statement):
                     crypto_name, statement_price, statement_date = extract_info(statement.statement)
-                    acctual_price = get_crypto_price_on_date(crypto_name, statement_date)
-                    if acctual_price > statement_price:
-                        miner_response = MinerResponse(
-                            statement=statement.statement,
-                            resolution=Resolution.TRUE,
-                            confidence=100,
-                            summary="Leu leu",
-                            sources=cheating_sources,
-                            reasoning="AI-powered analysis"
-                        )
-                    else:
-                        miner_response = MinerResponse(
-                            statement=statement.statement,
-                            resolution=Resolution.FALSE,
-                            confidence=100,
-                            summary="Leu leu",
-                            sources=cheating_sources,
-                            reasoning="AI-powered analysis"
-                        )
+                    actual_price = get_crypto_price_on_date(crypto_name, statement_date)
+                    print(f'**** Verify {crypto_name} price, statement_price: {statement_price} |||| actual_price: {actual_price}')
+                    miner_response = MinerResponse(
+                        statement=statement.statement,
+                        resolution=Resolution.TRUE if actual_price > statement_price else Resolution.FALSE,
+                        confidence=100,
+                        summary="Leu leu",
+                        sources=cheating_sources,
+                        reasoning="AI-powered analysis"
+                    )
                     database_insert_data(statement.statement, miner_response.model_dump())
                     return miner_response
                 else:
