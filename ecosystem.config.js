@@ -40,20 +40,18 @@ const baseEnv = {
   LOG_DIR: "./logs",
   MAX_WORKERS: process.env.MAX_WORKERS || "4",
   REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || "30",
-  WALLET_NAME: process.env.WALLET_NAME || "my_wallet"
+  WALLET_NAME: process.env.WALLET_NAME || "tienvh_coldkey"
 };
 
 // Configuration for miners
 const minerConfigs = [
-  { name: "miner_1", port: "8091", hotkey: "miner_1" },
-  { name: "miner_2", port: "8092", hotkey: "miner_2" },
-  { name: "miner_3", port: "8093", hotkey: "miner_3" }
+  { name: "miner_1", port: "9001", hotkey: "miner_1" }
 ];
 
 // Configuration for validators
-const validatorConfigs = [
-  { name: "validator_1", port: "9091", hotkey: "validator" }
-];
+// const validatorConfigs = [
+//   { name: "validator_1", port: "9091", hotkey: "validator" }
+// ];
 
 // Generate app configurations
 const apps = [];
@@ -71,9 +69,8 @@ minerConfigs.forEach(config => {
         ...baseEnv,
         HOTKEY_NAME: config.hotkey,
         MINER_PORT: config.port,
-        MINER_STRATEGY: process.env.MINER_STRATEGY || "hybrid",
+        MINER_STRATEGY: process.env.MINER_STRATEGY || "ai_reasoning",
         MINER_ID: config.name,
-        STRATEGY_WEIGHTS: process.env.STRATEGY_WEIGHTS || '{"ai": 0.6, "heuristic": 0.4}',
         VIRTUAL_ENV: venvPath,
         PATH: `${path.join(venvPath, "bin")}:${process.env.PATH}`
       }
@@ -82,24 +79,24 @@ minerConfigs.forEach(config => {
 });
 
 // Add validators if their hotkeys exist
-validatorConfigs.forEach(config => {
-  if (hotkeyExists(baseEnv.WALLET_NAME, config.hotkey)) {
-    apps.push({
-      ...baseConfig,
-      name: config.name,
-      script: path.join(base, "run_validator.py"),
-      error_file: path.join(base, "logs", `${config.name}.error.log`),
-      out_file: path.join(base, "logs", `${config.name}.log`),
-      env: {
-        ...baseEnv,
-        HOTKEY_NAME: config.hotkey,
-        VALIDATOR_PORT: config.port,
-        VIRTUAL_ENV: venvPath,
-        PATH: `${path.join(venvPath, "bin")}:${process.env.PATH}`
-      }
-    });
-  }
-});
+// validatorConfigs.forEach(config => {
+//   if (hotkeyExists(baseEnv.WALLET_NAME, config.hotkey)) {
+//     apps.push({
+//       ...baseConfig,
+//       name: config.name,
+//       script: path.join(base, "run_validator.py"),
+//       error_file: path.join(base, "logs", `${config.name}.error.log`),
+//       out_file: path.join(base, "logs", `${config.name}.log`),
+//       env: {
+//         ...baseEnv,
+//         HOTKEY_NAME: config.hotkey,
+//         VALIDATOR_PORT: config.port,
+//         VIRTUAL_ENV: venvPath,
+//         PATH: `${path.join(venvPath, "bin")}:${process.env.PATH}`
+//       }
+//     });
+//   }
+// });
 
 // Show status message
 if (apps.length === 0) {
