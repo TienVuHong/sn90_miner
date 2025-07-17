@@ -46,7 +46,9 @@ const baseEnv = {
 // Configuration for miners
 const minerConfigs = [
   { name: "miner_1", port: "9001", hotkey: "miner_1" },
-  { name: "miner_2", port: "9002", hotkey: "miner_2" }
+  { name: "miner_2", port: "9002", hotkey: "miner_2" },
+  { name: "miner_3", port: "9003", hotkey: "miner_3" },
+  { name: "miner_4", port: "9004", hotkey: "miner_4" }
 ];
 
 // Configuration for validators
